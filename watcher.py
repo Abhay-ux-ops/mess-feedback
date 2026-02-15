@@ -7,10 +7,10 @@ import time
 # ==========================================
 # 1. CONFIGURATION (Add your details here)
 # ==========================================
-GMAIL_USER = "your_email@gmail.com"
-GMAIL_APP_PASSWORD = "xxxx xxxx xxxx xxxx"  # The 16-char App Password
-GEMINI_API_KEY = "AIzaSy..."               # Your Gemini API Key
-MANAGER_EMAIL = "manager_email@gmail.com"  # Who receives the alerts?
+GMAIL_USER = "ascabhay123@gmail.com"
+GMAIL_APP_PASSWORD = "wvnf tvnt ubij uodc"  # The 16-char App Password
+GEMINI_API_KEY = "AIzaSyAhf8U5I0FECD1MrDTuNiAldybslbB7dtQ"               # Your Gemini API Key
+MANAGER_EMAIL = "ascabhay123@gmail.com"  # Who receives the alerts?
 
 # ==========================================
 # 2. INITIALIZATION
@@ -82,4 +82,5 @@ if __name__ == "__main__":
     while True:
         process_feedback()
         time.sleep(15) # Checks every 15 seconds
+
 

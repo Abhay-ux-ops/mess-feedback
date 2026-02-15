@@ -4,12 +4,16 @@ from firebase_admin import credentials, firestore
 import datetime
 
 # 1. DATABASE INITIALIZATION (Cloud-Safe Version)
-# This block uses Streamlit Secrets to avoid "Invalid JWT Signature" errors
 if not firebase_admin._apps:
     try:
-        # This pulls the [firebase] section from your Streamlit Dashboard Secrets
-        firebase_secrets = dict(st.secrets["firebase"])
-        cred = credentials.Certificate(firebase_secrets)
+        # Pull secrets from the Streamlit Dashboard
+        secret_dict = dict(st.secrets["firebase"])
+        
+        # FIX: Ensure the private key handles newlines correctly to prevent "Invalid Signature"
+        if "private_key" in secret_dict:
+            secret_dict["private_key"] = secret_dict["private_key"].replace("\\n", "\n")
+        
+        cred = credentials.Certificate(secret_dict)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"❌ Firebase Connection Error: {e}")
@@ -18,7 +22,7 @@ if not firebase_admin._apps:
 # Create the database client
 db = firestore.client()
 
-# 2. UI CONFIGURATION & BRANDING
+# 2. UI CONFIGURATION
 st.set_page_config(page_title="NITJ Mess Feedback", page_icon="🍲", layout="centered")
 
 # Custom CSS for a professional look
@@ -53,14 +57,13 @@ with st.container():
             category = st.selectbox("Issue Category", ["Hygiene", "Food Quality", "Taste", "Staff Behavior"])
             rating = st.select_slider("Rating", options=[1, 2, 3, 4, 5], value=3)
 
-        comment = st.text_area("Describe the issue...", placeholder="e.g., Found a pest in the food or salt is too high.")
+        comment = st.text_area("Describe the issue...", placeholder="e.g., Found a pest in the food.")
         
         submit_button = st.form_submit_button("Submit Feedback")
 
 # 4. SUBMISSION LOGIC
 if submit_button:
     if roll_no and comment:
-        # Prepare the data object exactly how watcher.py expects it
         feedback_data = {
             "rollNo": roll_no.upper().strip(),
             "mess": mess_name,
@@ -68,20 +71,18 @@ if submit_button:
             "rating": rating,
             "comment": comment,
             "timestamp": datetime.datetime.now(),
-            "sentiment": "Pending",  # This 'Pending' status triggers the watcher.py
+            "sentiment": "Pending",  # This triggers the watcher.py
             "status": "Open"
         }
         
         try:
-            # Add to Firestore collection 'feedbacks'
             db.collection("feedbacks").add(feedback_data)
-            st.success(f"✅ Feedback received for {roll_no.upper()}. AI is analyzing your report!")
+            st.success(f"✅ Feedback received. AI is analyzing your report!")
             st.balloons()
         except Exception as e:
             st.error(f"❌ Database Submission Failed: {e}")
     else:
         st.warning("⚠️ Please fill in both the Roll Number and the Comment fields.")
 
-# 5. FOOTER
 st.markdown("---")
 st.caption("Campus Safety Portal | Powered by Google Gemini AI & Firebase.")

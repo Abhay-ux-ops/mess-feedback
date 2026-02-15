@@ -4,26 +4,35 @@ from firebase_admin import credentials, firestore
 import datetime
 
 # 1. DATABASE INITIALIZATION (Cloud-Safe Version)
+# This block uses Streamlit Secrets to avoid "Invalid JWT Signature" errors
 if not firebase_admin._apps:
     try:
-        # This reads the [firebase] section from your Streamlit Dashboard Secrets
-        firebase_dict = dict(st.secrets["firebase"])
-        cred = credentials.Certificate(firebase_dict)
+        # This pulls the [firebase] section from your Streamlit Dashboard Secrets
+        firebase_secrets = dict(st.secrets["firebase"])
+        cred = credentials.Certificate(firebase_secrets)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"❌ Firebase Connection Error: {e}")
-        st.info("Check your Streamlit Secrets TOML format!")
+        st.info("Ensure you have pasted the TOML secrets into the Streamlit Dashboard.")
 
+# Create the database client
 db = firestore.client()
 
-# 2. UI CONFIGURATION
+# 2. UI CONFIGURATION & BRANDING
 st.set_page_config(page_title="NITJ Mess Feedback", page_icon="🍲", layout="centered")
 
-# Custom CSS for better look
+# Custom CSS for a professional look
 st.markdown("""
     <style>
     .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #ff4b4b; color: white; }
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 5px; 
+        height: 3em; 
+        background-color: #ff4b4b; 
+        color: white; 
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,7 +60,7 @@ with st.container():
 # 4. SUBMISSION LOGIC
 if submit_button:
     if roll_no and comment:
-        # Prepare the data object
+        # Prepare the data object exactly how watcher.py expects it
         feedback_data = {
             "rollNo": roll_no.upper().strip(),
             "mess": mess_name,
@@ -59,7 +68,7 @@ if submit_button:
             "rating": rating,
             "comment": comment,
             "timestamp": datetime.datetime.now(),
-            "sentiment": "Pending",  # This is the 'flag' for your watcher.py
+            "sentiment": "Pending",  # This 'Pending' status triggers the watcher.py
             "status": "Open"
         }
         
@@ -75,4 +84,4 @@ if submit_button:
 
 # 5. FOOTER
 st.markdown("---")
-st.caption("Admin Dashboard powered by Google Gemini AI & Firebase.")
+st.caption("Campus Safety Portal | Powered by Google Gemini AI & Firebase.")

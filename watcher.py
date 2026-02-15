@@ -5,12 +5,17 @@ from firebase_admin import credentials, firestore
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Load security environment variables
-load_dotenv()
+# 1. FORCE LOAD ENVIRONMENT VARIABLES
+# This ensures the script reads your .env file in the current folder
+load_dotenv(override=True)
+api_key = os.getenv("GEMINI_API_KEY")
 
-# 1. SETUP: Gemini AI
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+if not api_key:
+    print("❌ ERROR: Gemini API Key not found in .env file!")
+else:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    print("✅ Gemini AI Connected!")
 
 # 2. SETUP: Firebase Local
 if not firebase_admin._apps:
@@ -20,29 +25,24 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def process_feedback():
-    # Only get "Pending" feedback
     docs = db.collection("feedbacks").where("sentiment", "==", "Pending").stream()
-    
     for doc in docs:
         data = doc.to_dict()
         comment = data.get("comment", "")
         print(f"🔍 Analyzing: {comment[:30]}...")
 
         try:
-            # AI Analysis
-            prompt = f"Analyze this mess food feedback: '{comment}'. If it mentions pests, sickness, or hygiene issues, label as 'CRITICAL'. Otherwise label 'NORMAL'."
+            prompt = f"Analyze this mess food feedback: '{comment}'. Label as 'CRITICAL' if it mentions safety/hygiene, otherwise 'NORMAL'."
             response = model.generate_content(prompt)
             prediction = response.text.strip()
 
-            # Update Database
             doc.reference.update({"sentiment": prediction})
-            print(f"✅ Label set to: {prediction}")
-
+            print(f"✅ Result: {prediction}")
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"❌ AI Error: {e}")
 
 if __name__ == "__main__":
-    print("🚀 AI Watcher is LIVE. Scanning every 15 seconds...")
+    print("🚀 Watcher is LIVE. Waiting for feedback...")
     while True:
         process_feedback()
         time.sleep(15)

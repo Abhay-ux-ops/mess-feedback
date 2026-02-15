@@ -18,7 +18,7 @@ if not api_key:
 # 2. SETUP AI MODEL 
 # Added 'models/' prefix to fix the 404 error
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-flash-latest')
 print("✅ Gemini AI Connected!")
 
 # 3. SETUP FIREBASE

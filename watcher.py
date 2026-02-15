@@ -1,68 +1,52 @@
+import os
+import time
 import firebase_admin
 from firebase_admin import credentials, firestore
-from google import genai
-import yagmail
-import time
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# --- CONFIGURATION ---
-GMAIL_USER = "ascabhay123@gmail.com"
-GMAIL_APP_PASS = "wvnf tvnt ubij uod" 
-GEMINI_KEY = "AIzaSyAhf8U5I0FECD1MrDTuNiAldybslbB7dtQ"
-RECIPIENT_EMAIL = "ascabhay123@gmail.com" # Change if sending to a real manager
+# Load security environment variables
+load_dotenv()
 
-# --- INITIALIZATION ---
-client = genai.Client(api_key=GEMINI_KEY)
-yag = yagmail.SMTP(GMAIL_USER, GMAIL_APP_PASS)
+# 1. SETUP: Gemini AI
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-1.5-flash')
 
+# 2. SETUP: Firebase Local
 if not firebase_admin._apps:
-    cred = credentials.Certificate('serviceAccountKey.json')
+    cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
 def process_feedback():
-    # Look for "Pending" entries
+    # Only get "Pending" feedback
     docs = db.collection("feedbacks").where("sentiment", "==", "Pending").stream()
     
     for doc in docs:
         data = doc.to_dict()
-        comment = data.get('comment', '')
-        roll_no = data.get('rollNo', 'N/A')
-        mess = data.get('mess', 'N/A')
-        
-        print(f"🔍 Checking feedback from {roll_no}...")
+        comment = data.get("comment", "")
+        print(f"🔍 Analyzing: {comment[:30]}...")
 
         try:
-            # AI Analysis using 2.0-flash
-            response = client.models.generate_content(
-                model='gemini-2.0-flash', 
-                contents=f"Analyze: '{comment}'. If it mentions pests, raw food, or hygiene hazards, reply 'CRITICAL'. Else 'ROUTINE'."
-            )
-            prediction = response.text.strip().upper()
-            
+            # AI Analysis
+            prompt = f"Analyze this mess food feedback: '{comment}'. If it mentions pests, sickness, or hygiene issues, label as 'CRITICAL'. Otherwise label 'NORMAL'."
+            response = model.generate_content(prompt)
+            prediction = response.text.strip()
+
             # Update Database
             doc.reference.update({"sentiment": prediction})
             print(f"✅ Label set to: {prediction}")
-            
-            # Email Trigger
-            if "CRITICAL" in prediction:
-                subject = f"🚨 URGENT: Hygiene Alert - {mess}"
-                body = (f"Manager Alert!\n\n"
-                        f"Student {roll_no} reported a CRITICAL issue at {mess}.\n"
-                        f"Comment: {comment}\n\n"
-                        f"Please take action immediately.")
-                
-                yag.send(to=RECIPIENT_EMAIL, subject=subject, contents=body)
-                print(f"📧 Alert Email Sent for {roll_no}!")
 
         except Exception as e:
-            print(f"❌ Error processing {doc.id}: {e}")
+            print(f"❌ Error: {e}")
 
-# --- MAIN LOOP ---
 if __name__ == "__main__":
     print("🚀 AI Watcher is LIVE. Scanning every 15 seconds...")
     while True:
         process_feedback()
         time.sleep(15)
+
 
 
 

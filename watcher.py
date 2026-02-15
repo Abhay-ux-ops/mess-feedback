@@ -4,10 +4,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import google.generativeai as genai
 from dotenv import load_dotenv, find_dotenv
-# NEW IMPORT to fix the positional argument warning
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-# 1. LOAD API KEY
+# 1. Load the new key from your .env file
 load_dotenv(find_dotenv())
 api_key = os.getenv("GEMINI_API_KEY")
 
@@ -15,13 +14,12 @@ if not api_key:
     print("❌ ERROR: Gemini API Key not found in .env file!")
     exit()
 
-# 2. SETUP AI MODEL 
-# Added 'models/' prefix to fix the 404 error
+# 2. Setup AI with the stable model name
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-flash-latest')
-print("✅ Gemini AI Connected!")
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
+print("✅ Gemini AI Connected with new key!")
 
-# 3. SETUP FIREBASE
+# 3. Setup Firebase
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
@@ -29,7 +27,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def process_feedback():
-    # REPLACED LINE: Uses FieldFilter to remove the UserWarning
+    # Correct filter to remove the positional argument warning
     docs = db.collection("feedbacks").where(filter=FieldFilter("sentiment", "==", "Pending")).stream()
     
     for doc in docs:
@@ -48,7 +46,7 @@ def process_feedback():
             print(f"❌ AI Error: {e}")
 
 if __name__ == "__main__":
-    print("🚀 Watcher is LIVE. Scanning for feedback...")
+    print("🚀 Watcher is LIVE. Scanning...")
     while True:
         process_feedback()
         time.sleep(15)
